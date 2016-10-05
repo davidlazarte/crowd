@@ -2,7 +2,7 @@
 
 /**
  * This file is part of Crowd,
- * a role & permission management solution for Laravel.
+ * a group-role-permission management solution for Laravel.
  *
  * @license MIT
  * @package davidlazarte\Crowd
@@ -169,7 +169,6 @@ return [
     |--------------------------------------------------------------------------
     */
     'middleware_params' => '403',
-
 
     /*
     |--------------------------------------------------------------------------

@@ -10,7 +10,7 @@
 
 use Illuminate\Support\Facades\Facade;
 
-class EntrustFacade extends Facade
+class CrowdFacade extends Facade
 {
     /**
      * Get the registered name of the component.
