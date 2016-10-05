@@ -52,7 +52,7 @@ trait CrowdRoleTrait
             Config::get('crowd.member'),
             Config::get('crowd.role_member_table'),
             Config::get('crowd.role_foreign_key'),
-            Config::get('crowd.member_foreign_key'));
+            Config::get('crowd.membership_foreign_key'));
     }
 
     /**
@@ -65,7 +65,9 @@ trait CrowdRoleTrait
     {
         return $this->belongsToMany(
             Config::get('crowd.permission'),
-            Config::get('crowd.permission_role_table')
+            Config::get('crowd.permission_role_table'),
+            Config::get('crowd.role_foreign_key'),
+            Config::get('crowd.permission_foreign_key')
         );
     }
 

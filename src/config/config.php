@@ -2,7 +2,7 @@
 
 /**
  * This file is part of Crowd,
- * a group-role-permission management solution for Laravel.
+ * a role & permission management solution for Laravel.
  *
  * @license MIT
  * @package davidlazarte\Crowd
@@ -31,7 +31,6 @@ return [
     |
     */
     'groups_table' => 'groups',
-
 
     /*
     |--------------------------------------------------------------------------
@@ -139,21 +138,21 @@ return [
     | Member Foreign key on Crowd's member_role Table (Pivot)
     |--------------------------------------------------------------------------
     */
-    'member_foreign_key' => 'membership_id',
+    'membership_foreign_key' => 'membership_id',
 
     /*
     |--------------------------------------------------------------------------
     | Role Foreign key on Crowd's role_user Table (Pivot)
     |--------------------------------------------------------------------------
     */
+    'role_foreign_key' => 'role_id',
 
-    'role_foreign_key' => 'group_role_id',
     /*
     |--------------------------------------------------------------------------
     | Permission Foreign key on Crowd's permission_role Table (Pivot)
     |--------------------------------------------------------------------------
     */
-    'permission_foreign_key' => 'group_permission_id',
+    'permission_foreign_key' => 'permission_id',
 
     /*
     |--------------------------------------------------------------------------

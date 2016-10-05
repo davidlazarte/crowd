@@ -2,37 +2,30 @@
 
 /**
  * This file is part of Crowd,
- * a role & permission management solution for Laravel.
+ * a group-role-permission management solution for Laravel.
  *
  * @license MIT
  * @package davidlazarte\Crowd
  */
 
-use davidlazarte\Crowd\Contracts\CrowdGroupInterface;
-use davidlazarte\Crowd\Traits\CrowdGroupTrait;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Config;
-
-class CrowdGroup extends Model implements CrowdGroupInterface
+class Crowd
 {
-    use CrowdGroupTrait;
-
     /**
-     * The database table used by the model.
+     * Laravel application
      *
-     * @var string
+     * @var \Illuminate\Foundation\Application
      */
-    protected $table;
+    public $app;
 
     /**
-     * Creates a new instance of the model.
+     * Create a new confide instance.
      *
-     * @param array $attributes
+     * @param \Illuminate\Foundation\Application $app
+     *
      * @return void
      */
-    public function __construct(array $attributes = [])
+    public function __construct($app)
     {
-        parent::__construct($attributes);
-        $this->table = Config::get('crowd.groups_table');
+        $this->app = $app;
     }
 }

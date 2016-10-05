@@ -3,7 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 
-class EntrustSetupTables extends Migration
+class CrowdSetupTables extends Migration
 {
     /**
      * Run the migrations.
@@ -13,10 +13,11 @@ class EntrustSetupTables extends Migration
     public function up()
     {
         // Create table for storing members
-        Schema::create('{{ $membersTable }}', function (Blueprint $table) {
+        Schema::create('{{ $membershipsTable }}', function (Blueprint $table) {
             $table->increments('id');
             $table->integer('group_id')->unsigned();
             $table->integer('user_id')->unsigned();
+            $table->timestamps();
 
             $table->foreign('group_id')->references('{{ $groupKeyName }}')->on('{{ $groupsTable }}')
                 ->onUpdate('cascade')->onDelete('cascade');
@@ -45,7 +46,7 @@ class EntrustSetupTables extends Migration
             $table->foreign('role_id')->references('id')->on('{{ $rolesTable }}')
                 ->onUpdate('cascade')->onDelete('cascade');
 
-            $table->primary(['user_id', 'role_id']);
+            $table->primary(['membership_id', 'role_id']);
         });
 
         // Create table for storing permissions
@@ -80,8 +81,8 @@ class EntrustSetupTables extends Migration
     {
         Schema::drop('{{ $permissionRoleTable }}');
         Schema::drop('{{ $permissionsTable }}');
-        Schema::drop('{{ $memberRoleTable }}');
+        Schema::drop('{{ $membershipRoleTable }}');
         Schema::drop('{{ $rolesTable }}');
-        Schema::drop('{{ $membersTable }}');
+        Schema::drop('{{ $membershipsTable }}');
     }
 }

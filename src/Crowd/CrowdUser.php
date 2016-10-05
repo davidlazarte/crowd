@@ -10,195 +10,31 @@ namespace davidlazarte\Crowd;
  * @package davidlazarte\Crowd
  */
 
-class Crowd
+use davidlazarte\Crowd\Contracts\CrowdUserInterface;
+use davidlazarte\Crowd\Traits\CrowdUserTrait;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Config;
+
+class CrowdUser extends Model implements CrowdUserInterface
 {
-    /**
-     * Laravel application
-     *
-     * @var \Illuminate\Foundation\Application
-     */
-    public $app;
+    use CrowdUserTrait;
 
     /**
-     * Create a new confide instance.
+     * The database table used by the model.
      *
-     * @param \Illuminate\Foundation\Application $app
+     * @var string
+     */
+    protected $table;
+
+    /**
+     * Creates a new instance of the model.
      *
+     * @param array $attributes
      * @return void
      */
-    public function __construct($app)
+    public function __construct(array $attributes = [])
     {
-        $this->app = $app;
-    }
-
-    /**
-     * Checks if the current user has a role by its name
-     *
-     * @param string $name Role name.
-     *
-     * @return bool
-     */
-    public function hasRole($role, $group = null, $requireAll = false)
-    {
-        if ($user = $this->user()) {
-            return $user->hasRole($role, $group, $requireAll);
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if the current user has a permission by its name
-     *
-     * @param string $permission Permission string.
-     *
-     * @return bool
-     */
-    public function can($permission, $group = null, $requireAll = false)
-    {
-        if ($user = $this->user()) {
-            return $user->can($permission, $group, $requireAll);
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if the current user has a role or permission by its name
-     *
-     * @param array|string $roles            The role(s) needed.
-     * @param array|string $permissions      The permission(s) needed.
-     * @param array $options                 The Options.
-     *
-     * @return bool
-     */
-    public function ability($roles, $permissions, $group = null, $options = [])
-    {
-        if ($user = $this->user()) {
-            return $user->ability($roles, $permissions, $group = null, $options);
-        }
-
-        return false;
-    }
-
-    /**
-     * Get the currently authenticated user or null.
-     *
-     * @return Illuminate\Auth\UserInterface|null
-     */
-    public function user()
-    {
-        return $this->app->auth->user();
-    }
-
-    /**
-     * Filters a route for a role or set of roles.
-     *
-     * If the third parameter is null then abort with status code 403.
-     * Otherwise the $result is returned.
-     *
-     * @param string       $route      Route pattern. i.e: "admin/*"
-     * @param array|string $roles      The role(s) needed
-     * @param mixed        $result     i.e: Redirect::to('/')
-     * @param bool         $requireAll User must have all roles
-     *
-     * @return mixed
-     */
-    public function routeNeedsRole($route, $roles, $result = null, $requireAll = true)
-    {
-        $filterName  = is_array($roles) ? implode('_', $roles) : $roles;
-        $filterName .= '_'.substr(md5($route), 0, 6);
-
-        $closure = function () use ($roles, $result, $requireAll) {
-            $hasRole = $this->hasRole($roles, $requireAll);
-
-            if (!$hasRole) {
-                return empty($result) ? $this->app->abort(403) : $result;
-            }
-        };
-
-        // Same as Route::filter, registers a new filter
-        $this->app->router->filter($filterName, $closure);
-
-        // Same as Route::when, assigns a route pattern to the
-        // previously created filter.
-        $this->app->router->when($route, $filterName);
-    }
-
-    /**
-     * Filters a route for a permission or set of permissions.
-     *
-     * If the third parameter is null then abort with status code 403.
-     * Otherwise the $result is returned.
-     *
-     * @param string       $route       Route pattern. i.e: "admin/*"
-     * @param array|string $permissions The permission(s) needed
-     * @param mixed        $result      i.e: Redirect::to('/')
-     * @param bool         $requireAll  User must have all permissions
-     *
-     * @return mixed
-     */
-    public function routeNeedsPermission($route, $permissions, $result = null, $requireAll = true)
-    {
-        $filterName  = is_array($permissions) ? implode('_', $permissions) : $permissions;
-        $filterName .= '_'.substr(md5($route), 0, 6);
-
-        $closure = function () use ($permissions, $result, $requireAll) {
-            $hasPerm = $this->can($permissions, $requireAll);
-
-            if (!$hasPerm) {
-                return empty($result) ? $this->app->abort(403) : $result;
-            }
-        };
-
-        // Same as Route::filter, registers a new filter
-        $this->app->router->filter($filterName, $closure);
-
-        // Same as Route::when, assigns a route pattern to the
-        // previously created filter.
-        $this->app->router->when($route, $filterName);
-    }
-
-    /**
-     * Filters a route for role(s) and/or permission(s).
-     *
-     * If the third parameter is null then abort with status code 403.
-     * Otherwise the $result is returned.
-     *
-     * @param string       $route       Route pattern. i.e: "admin/*"
-     * @param array|string $roles       The role(s) needed
-     * @param array|string $permissions The permission(s) needed
-     * @param mixed        $result      i.e: Redirect::to('/')
-     * @param bool         $requireAll  User must have all roles and permissions
-     *
-     * @return void
-     */
-    public function routeNeedsRoleOrPermission($route, $roles, $permissions, $result = null, $requireAll = false)
-    {
-        $filterName  =      is_array($roles)       ? implode('_', $roles)       : $roles;
-        $filterName .= '_'.(is_array($permissions) ? implode('_', $permissions) : $permissions);
-        $filterName .= '_'.substr(md5($route), 0, 6);
-
-        $closure = function () use ($roles, $permissions, $result, $requireAll) {
-            $hasRole  = $this->hasRole($roles, $requireAll);
-            $hasPerms = $this->can($permissions, $requireAll);
-
-            if ($requireAll) {
-                $hasRolePerm = $hasRole && $hasPerms;
-            } else {
-                $hasRolePerm = $hasRole || $hasPerms;
-            }
-
-            if (!$hasRolePerm) {
-                return empty($result) ? $this->app->abort(403) : $result;
-            }
-        };
-
-        // Same as Route::filter, registers a new filter
-        $this->app->router->filter($filterName, $closure);
-
-        // Same as Route::when, assigns a route pattern to the
-        // previously created filter.
-        $this->app->router->when($route, $filterName);
+        parent::__construct($attributes);
+        $this->table = Config::get('auth.providers.users.table');
     }
 }

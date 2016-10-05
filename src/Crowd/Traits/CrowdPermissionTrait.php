@@ -10,7 +10,7 @@
 
 use Illuminate\Support\Facades\Config;
 
-trait EntrustPermissionTrait
+trait CrowdPermissionTrait
 {
     /**
      * Many-to-Many relations with role model.

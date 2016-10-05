@@ -1,21 +1,21 @@
 <?php namespace davidlazarte\Crowd;
 
 /**
- * This file is part of Crowd,
- * a role & permission management solution for Laravel.
+ * This class is the main entry point of crowd. Usually this the interaction
+ * with this class will be done through the Crowd Facade
  *
  * @license MIT
  * @package davidlazarte\Crowd
  */
 
-use davidlazarte\Crowd\Contracts\EntrustGroupInterface;
-use davidlazarte\Crowd\Traits\EntrustGroupTrait;
+use davidlazarte\Crowd\Contracts\CrowdMembershipInterface;
+use davidlazarte\Crowd\Traits\CrowdMembershipTrait;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Config;
 
-class EntrustGroup extends Model implements EntrustGroupInterface
+class CrowdMembership extends Model implements CrowdMembershipInterface
 {
-    use EntrustGroupTrait;
+    use CrowdMembershipTrait;
 
     /**
      * The database table used by the model.
@@ -33,6 +33,6 @@ class EntrustGroup extends Model implements EntrustGroupInterface
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        $this->table = Config::get('crowd.groups_table');
+        $this->table = Config::get('crowd.memberships_table');
     }
 }

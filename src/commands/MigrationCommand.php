@@ -37,13 +37,13 @@ class MigrationCommand extends Command
         $this->laravel->view->addNamespace('crowd', substr(__DIR__, 0, -8).'views');
 
         $membershipsTable        = Config::get('crowd.memberships_table');
-        $rolesTable          = Config::get('crowd.roles_table');
+        $rolesTable              = Config::get('crowd.roles_table');
         $membershipRoleTable     = Config::get('crowd.membership_role_table');
-        $permissionsTable    = Config::get('crowd.permissions_table');
-        $permissionRoleTable = Config::get('crowd.permission_role_table');
+        $permissionsTable        = Config::get('crowd.permissions_table');
+        $permissionRoleTable     = Config::get('crowd.permission_role_table');
 
         $this->line('');
-        $this->info( "Tables: $membershipsTable, $rolesTable, $membershipRoleTable, $permissionsTable, $permissionRoleTable" );
+        $this->info("Tables: $membershipsTable, $rolesTable, $membershipRoleTable, $permissionsTable, $permissionRoleTable");
 
         $message = "A migration that creates '$membershipsTable', '$rolesTable', '$membershipRoleTable', '$permissionsTable',"
         . " '$permissionRoleTable' tables will be created in database/migrations directory";
@@ -54,12 +54,14 @@ class MigrationCommand extends Command
         if ($this->confirm("Proceed with the migration creation? [Yes|no]", "Yes")) {
 
             $this->line('');
-
             $this->info("Creating migration...");
-            if ($this->createMigration($membershipsTable, $rolesTable, $membershipRoleTable, $permissionsTable, $permissionRoleTable)) {
 
+            if ($this->createMigration($membershipsTable, $rolesTable, $membershipRoleTable, $permissionsTable, $permissionRoleTable))
+            {
                 $this->info("Migration successfully created!");
-            } else {
+            }
+            else
+            {
                 $this->error(
                     "Couldn't create migration.\n Check the write permissions".
                     " within the database/migrations directory."
@@ -87,11 +89,11 @@ class MigrationCommand extends Command
         $migrationFile = base_path("/database/migrations")."/".date('Y_m_d_His')."_crowd_setup_tables.php";
 
         $groupsModel   = Config::get('crowd.group');
-        $groupsTable  = Config::get('crowd.groups_table');
-        $groupKeyName = (new $groupsModel())->getKeyName();
-        $userModel   = Config::get('auth.providers.users.model');
-        $usersTable  = Config::get('auth.providers.users.table');
-        $userKeyName = (new $userModel())->getKeyName();
+        $groupsTable   = Config::get('crowd.groups_table');
+        $groupKeyName  = (new $groupsModel())->getKeyName();
+        $userModel     = Config::get('auth.providers.users.model');
+        $usersTable    = Config::get('auth.providers.users.table');
+        $userKeyName   = (new $userModel())->getKeyName();
 
 
         $data = compact(

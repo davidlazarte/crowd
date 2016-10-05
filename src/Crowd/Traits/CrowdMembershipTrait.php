@@ -12,14 +12,14 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use InvalidArgumentException;
 
-trait CrowdMemberTrait
+trait CrowdMembershipTrait
 {
     //Big block of caching functionality.
     public function cachedRoles()
     {
         $userPrimaryKey = $this->primaryKey;
-        $cacheKey = 'entrust_roles_for_user_'.$this->$userPrimaryKey;
-        return Cache::tags(Config::get('crowd.role_user_table'))
+        $cacheKey = 'entrust_roles_for_membership_'.$this->$userPrimaryKey;
+        return Cache::tags(Config::get('crowd.membership_role_table'))
           ->remember($cacheKey, Config::get('cache.ttl'), function () {
             return $this->roles()->get();
         });
@@ -27,20 +27,35 @@ trait CrowdMemberTrait
     public function save(array $options = [])
     {   //both inserts and updates
         $result = parent::save($options);
-        Cache::tags(Config::get('crowd.role_user_table'))->flush();
+        Cache::tags(Config::get('crowd.membership_role_table'))->flush();
         return $result;
     }
     public function delete(array $options = [])
     {   //soft or hard
         $result = parent::delete($options);
-        Cache::tags(Config::get('crowd.role_user_table'))->flush();
+        Cache::tags(Config::get('crowd.membership_role_table'))->flush();
         return $result;
     }
     public function restore()
     {   //soft delete undo's
         $result = parent::restore();
-        Cache::tags(Config::get('crowd.role_user_table'))->flush();
+        Cache::tags(Config::get('crowd.membership_role_table'))->flush();
         return $result;
+    }
+
+    /**
+     * Many-to-Many relations with Crowd.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function group()
+    {
+        return $this->belongsToMany(
+            Config::get('crowd.group'),
+            Config::get('crowd.membership_role_table'),
+            Config::get('crowd.user_foreign_key'),
+            Config::get('crowd.group_foreign_key')
+        );
     }
     
     /**
@@ -52,10 +67,25 @@ trait CrowdMemberTrait
     {
         return $this->belongsToMany(
             Config::get('crowd.role'),
-            Config::get('crowd.role_user_table'),
-            Config::get('crowd.user_foreign_key'),
+            Config::get('crowd.membership_role_table'),
+            Config::get('crowd.membership_foreign_key'),
             Config::get('crowd.role_foreign_key')
-        )->withPivot(Config::get('crowd.group_foreign_key'));
+        );
+    }
+
+    /**
+     * Many-to-Many relations with Crowd.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function user()
+    {
+        return $this->belongsToMany(
+            Config::get('crowd.group'),
+            Config::get('crowd.membership_role_table'),
+            Config::get('crowd.user_foreign_key'),
+            Config::get('crowd.group_foreign_key')
+        );
     }
 
     /**
@@ -68,57 +98,32 @@ trait CrowdMemberTrait
     public static function boot()
     {
         parent::boot();
-
-        static::deleting(function($user) {
-            if (!method_exists(Config::get('auth.model'), 'bootSoftDeletes')) {
-                $user->roles()->sync([]);
-            }
-
-            return true;
-        });
+//        static::deleting(function($user) {
+//            if (!method_exists(Config::get('auth.model'), 'bootSoftDeletes')) {
+//                $user->roles()->sync([]);
+//            }
+//
+//            return true;
+//        });
     }
 
     /**
-     * Many-to-Many relations with Crowd.
+     * Checks if the user has a role by its name.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @param string|array $name       Role name or array of role names.
+     * @param bool         $requireAll All roles in the array are required.
+     *
+     * @return bool
      */
-    public function groups()
+    public function hasRole($name, $requireAll = false)
     {
-      return $this->belongsToMany(
-        Config::get('crowd.crowd'),
-        Config::get('crowd.role_user_table'),
-        Config::get('crowd.user_foreign_key'),
-        Config::get('crowd.group_foreign_key')
-      )->withPivot(Config::get('crowd.role_foreign_key'));
-    }
+        if (is_array($name)) {
+            foreach ($name as $roleName) {
+                $hasRole = $this->hasRole($roleName);
 
-    /**
-       * Checks if the user has a role by its name.
-       *
-       * @param string|array   $name         Role name or array of role names.
-       * @param int|bool       $group_id        Crowd name or requiredAll roles.
-       * @param bool           $requireAll   All roles in the array are required.
-       *
-       * @return bool
-       */
-    public function hasRole($name, $group = null, $requireAll = false)
-    {
-        $requireAll = is_bool($group) ? $group : $requireAll;
-        $group = is_bool($group) ? null : $group;
-
-        if (is_array($name))
-        {
-            foreach ($name as $roleName)
-            {
-                $hasRole = $this->hasRole($roleName, $group);
-
-                if ($hasRole && !$requireAll)
-                {
+                if ($hasRole && !$requireAll) {
                     return true;
-                }
-                elseif (!$hasRole && $requireAll)
-                {
+                } elseif (!$hasRole && $requireAll) {
                     return false;
                 }
             }
@@ -127,28 +132,11 @@ trait CrowdMemberTrait
             // If we've made it this far and $requireAll is TRUE, then ALL of the roles were found.
             // Return the value of $requireAll;
             return $requireAll;
-        }
-
-        if (!empty($group)) {
-            if (is_string($group)) {
-                $group = call_user_func_array(
-                    [Config::get('crowd.crowd'), 'where'],
-                    ['name', $group]
-                )->first();
-            }
-            if (is_int($group)) {
-                $group = call_user_func_array(
-                    [Config::get('crowd.crowd'), 'find'],
-                    [$group]
-                )->first();
-            }
-
-            $group = is_null($group) ? $group : $group->getKey();
-        }
-
-        foreach ($this->cachedRoles() as $role) {
-            if ($role->name == $name && $role->pivot->group_id == $group) {
-                return true;
+        } else {
+            foreach ($this->cachedRoles() as $role) {
+                if ($role->name == $name) {
+                    return true;
+                }
             }
         }
 
@@ -158,29 +146,20 @@ trait CrowdMemberTrait
     /**
      * Check if user has a permission by its name.
      *
-     * @param string|array     $permission   Permission string or array of permissions
-     * @param int|string|bool  $group        Crowd id or Crowd name or requiredAll roles.
-     * @param bool             $requireAll   All permissions in the array are required.
+     * @param string|array $permission Permission string or array of permissions.
+     * @param bool         $requireAll All permissions in the array are required.
      *
      * @return bool
      */
-    public function can($permission, $group = null, $requireAll = false)
+    public function can($permission, $requireAll = false)
     {
-        $requireAll = is_bool($group) ? $group : $requireAll;
-        $group = is_bool($group) ? null : $group;
+        if (is_array($permission)) {
+            foreach ($permission as $permName) {
+                $hasPerm = $this->can($permName);
 
-        if (is_array($permission))
-        {
-            foreach ($permission as $permName)
-            {
-                $hasPerm = $this->can($permName, $group);
-
-                if ($hasPerm && !$requireAll)
-                {
+                if ($hasPerm && !$requireAll) {
                     return true;
-                }
-                elseif (!$hasPerm && $requireAll)
-                {
+                } elseif (!$hasPerm && $requireAll) {
                     return false;
                 }
             }
@@ -189,36 +168,13 @@ trait CrowdMemberTrait
             // If we've made it this far and $requireAll is TRUE, then ALL of the perms were found.
             // Return the value of $requireAll;
             return $requireAll;
-        }
-
-        if (!empty($group)) {
-            if (is_string($group)) {
-                $group = call_user_func_array(
-                    [Config::get('crowd.crowd'), 'where'],
-                    ['name', $group]
-                )->first();
-            }
-            if (is_int($group)) {
-                $group = call_user_func_array(
-                    [Config::get('crowd.crowd'), 'find'],
-                    [$group]
-                )->first();
-            }
-
-            $group = is_null($group) ? $group : $group->getKey();
-        }
-
-        foreach ($this->cachedRoles() as $role)
-        {
-            // Validate against the Permission table
-            if ($role->pivot->group_id != $group) {
-                continue;
-            }
-
-            // Validate against the Permission table
-            foreach ($role->cachedPermissions() as $perm) {
-                if (str_is($permission, $perm->name)) {
-                    return true;
+        } else {
+            foreach ($this->cachedRoles() as $role) {
+                // Validate against the Permission table
+                foreach ($role->cachedPermissions() as $perm) {
+                    if (str_is( $permission, $perm->name) ) {
+                        return true;
+                    }
                 }
             }
         }
@@ -229,20 +185,16 @@ trait CrowdMemberTrait
     /**
      * Checks role(s) and permission(s).
      *
-     * @param string|array     $roles        Array of roles or comma separated string
-     * @param string|array     $permissions  Array of permissions or comma separated string.
-     * @param int|string|bool  $group        Crowd id or Crowd name or requiredAll roles.
-     * @param array            $options      validate_all (true|false) or return_type (boolean|array|both)
+     * @param string|array $roles       Array of roles or comma separated string
+     * @param string|array $permissions Array of permissions or comma separated string.
+     * @param array        $options     validate_all (true|false) or return_type (boolean|array|both)
      *
      * @throws \InvalidArgumentException
      *
      * @return array|bool
      */
-    public function ability($roles, $permissions, $group = null, $options = [])
+    public function ability($roles, $permissions, $options = [])
     {
-        $options = is_array($group) ? $group : $options;
-        $group = is_array($group) ? null : $group;
-
         // Convert string to array if that's what is passed in.
         if (!is_array($roles)) {
             $roles = explode(',', $roles);
@@ -273,10 +225,10 @@ trait CrowdMemberTrait
         $checkedRoles = [];
         $checkedPermissions = [];
         foreach ($roles as $role) {
-            $checkedRoles[$role] = $this->hasRole($role, $group);
+            $checkedRoles[$role] = $this->hasRole($role);
         }
         foreach ($permissions as $permission) {
-            $checkedPermissions[$permission] = $this->can($permission, $group);
+            $checkedPermissions[$permission] = $this->can($permission);
         }
 
         // If validate all and there is a false in either
@@ -305,7 +257,7 @@ trait CrowdMemberTrait
      *
      * @param mixed $role
      */
-    public function attachRole($role, $group = null)
+    public function attachRole($role)
     {
         if(is_object($role)) {
             $role = $role->getKey();
@@ -315,15 +267,8 @@ trait CrowdMemberTrait
             $role = $role['id'];
         }
 
-        if (!is_null($group)) {
-            $group = $group->getKey();
-        }
-
-        $this->roles()->wherePivot(Config::get('crowd.group_foreign_key'), $group)
-            ->detach($role);
-        $this->roles()->attach($role, [Config::get('crowd.group_foreign_key') => $group]);
-
-        return $this;
+        $this->roles()->detach($role);
+        $this->roles()->attach($role);
     }
 
     /**
@@ -331,7 +276,7 @@ trait CrowdMemberTrait
      *
      * @param mixed $role
      */
-    public function detachRole($role, $group = null)
+    public function detachRole($role)
     {
         if (is_object($role)) {
             $role = $role->getKey();
@@ -341,18 +286,7 @@ trait CrowdMemberTrait
             $role = $role['id'];
         }
 
-        if (!is_object($group) && $group != null) {
-            throw new InvalidArgumentException;
-        }
-
-        if (!is_null($group)) {
-            $group = $group->getKey();
-        }
-
-        $this->roles()->wherePivot(Config::get('crowd.group_foreign_key'), $group)
-            ->detach($role);
-
-        return $this;
+        $this->roles()->detach($role);
     }
 
     /**
@@ -360,10 +294,10 @@ trait CrowdMemberTrait
      *
      * @param mixed $roles
      */
-    public function attachRoles($roles, $group = null)
+    public function attachRoles($roles)
     {
         foreach ($roles as $role) {
-            $this->attachRole($role, $group);
+            $this->attachRole($role);
         }
     }
 
@@ -372,12 +306,12 @@ trait CrowdMemberTrait
      *
      * @param mixed $roles
      */
-    public function detachRoles($roles=null, $group = null)
+    public function detachRoles($roles=null)
     {
         if (!$roles) $roles = $this->roles()->get();
-        
+
         foreach ($roles as $role) {
-            $this->detachRole($role, $group);
+            $this->detachRole($role);
         }
     }
 }
