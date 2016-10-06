@@ -44,15 +44,14 @@ trait CrowdMembershipTrait
     }
 
     /**
-     * Many-to-Many relations with Crowd.
+     * one-to-Many relations with group.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @return \Illuminate\Database\Eloquent\Relations\belongsTo
      */
     public function group()
     {
         return $this->belongsTo(
-            Config::get('crowd.group'),
-            Config::get('crowd.group_foreign_key')
+            Config::get('crowd.group')
         );
     }
     
@@ -72,17 +71,14 @@ trait CrowdMembershipTrait
     }
 
     /**
-     * Many-to-Many relations with Crowd.
+     * one-to-Many relations with Crowd.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @return \Illuminate\Database\Eloquent\Relations\belongsTo
      */
     public function user()
     {
-        return $this->belongsToMany(
-            Config::get('crowd.group'),
-            Config::get('crowd.membership_role_table'),
-            Config::get('crowd.user_foreign_key'),
-            Config::get('crowd.group_foreign_key')
+        return $this->belongsTo(
+            Config::get('auth.providers.users.model')
         );
     }
 
