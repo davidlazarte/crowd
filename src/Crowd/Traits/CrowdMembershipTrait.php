@@ -50,10 +50,8 @@ trait CrowdMembershipTrait
      */
     public function group()
     {
-        return $this->belongsToMany(
+        return $this->belongsTo(
             Config::get('crowd.group'),
-            Config::get('crowd.membership_role_table'),
-            Config::get('crowd.user_foreign_key'),
             Config::get('crowd.group_foreign_key')
         );
     }

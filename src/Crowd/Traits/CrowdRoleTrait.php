@@ -49,8 +49,8 @@ trait CrowdRoleTrait
     public function memberships()
     {
         return $this->belongsToMany(
-            Config::get('crowd.member'),
-            Config::get('crowd.role_member_table'),
+            Config::get('crowd.membership'),
+            Config::get('crowd.role_memberships_table'),
             Config::get('crowd.role_foreign_key'),
             Config::get('crowd.membership_foreign_key'));
     }

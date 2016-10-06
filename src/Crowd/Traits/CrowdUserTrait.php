@@ -22,8 +22,7 @@ trait CrowdUserTrait
     public function memberships()
     {
         return $this->hasMany(
-            Config::get('crowd.memberships'),
-            Config::get('crowd.memberships_table'),
+            Config::get('crowd.membership'),
             Config::get('crowd.user_foreign_key'));
     }
 }
