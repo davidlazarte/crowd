@@ -18,24 +18,27 @@ trait CrowdMembershipTrait
     public function cachedRoles()
     {
         $userPrimaryKey = $this->primaryKey;
-        $cacheKey = 'entrust_roles_for_membership_'.$this->$userPrimaryKey;
+        $cacheKey = 'crowd_roles_for_membership_'.$this->$userPrimaryKey;
         return Cache::tags(Config::get('crowd.membership_role_table'))
           ->remember($cacheKey, Config::get('cache.ttl'), function () {
             return $this->roles()->get();
         });
     }
+
     public function save(array $options = [])
     {   //both inserts and updates
         $result = parent::save($options);
         Cache::tags(Config::get('crowd.membership_role_table'))->flush();
         return $result;
     }
+
     public function delete(array $options = [])
     {   //soft or hard
         $result = parent::delete($options);
         Cache::tags(Config::get('crowd.membership_role_table'))->flush();
         return $result;
     }
+
     public function restore()
     {   //soft delete undo's
         $result = parent::restore();
@@ -111,13 +114,18 @@ trait CrowdMembershipTrait
      */
     public function hasRole($name, $requireAll = false)
     {
-        if (is_array($name)) {
-            foreach ($name as $roleName) {
+        if (is_array($name))
+        {
+            foreach ($name as $roleName)
+            {
                 $hasRole = $this->hasRole($roleName);
 
-                if ($hasRole && !$requireAll) {
+                if ($hasRole && !$requireAll)
+                {
                     return true;
-                } elseif (!$hasRole && $requireAll) {
+                }
+                elseif (!$hasRole && $requireAll)
+                {
                     return false;
                 }
             }
@@ -126,9 +134,13 @@ trait CrowdMembershipTrait
             // If we've made it this far and $requireAll is TRUE, then ALL of the roles were found.
             // Return the value of $requireAll;
             return $requireAll;
-        } else {
-            foreach ($this->cachedRoles() as $role) {
-                if ($role->name == $name) {
+        }
+        else
+        {
+            foreach ($this->cachedRoles() as $role)
+            {
+                if ($role->name == $name)
+                {
                     return true;
                 }
             }
@@ -147,13 +159,18 @@ trait CrowdMembershipTrait
      */
     public function can($permission, $requireAll = false)
     {
-        if (is_array($permission)) {
-            foreach ($permission as $permName) {
+        if (is_array($permission))
+        {
+            foreach ($permission as $permName)
+            {
                 $hasPerm = $this->can($permName);
 
-                if ($hasPerm && !$requireAll) {
+                if ($hasPerm && !$requireAll)
+                {
                     return true;
-                } elseif (!$hasPerm && $requireAll) {
+                }
+                elseif (!$hasPerm && $requireAll)
+                {
                     return false;
                 }
             }
@@ -162,11 +179,16 @@ trait CrowdMembershipTrait
             // If we've made it this far and $requireAll is TRUE, then ALL of the perms were found.
             // Return the value of $requireAll;
             return $requireAll;
-        } else {
-            foreach ($this->cachedRoles() as $role) {
+        }
+        else
+        {
+            foreach ($this->cachedRoles() as $role)
+            {
                 // Validate against the Permission table
-                foreach ($role->cachedPermissions() as $perm) {
-                    if (str_is( $permission, $perm->name) ) {
+                foreach ($role->cachedPermissions() as $perm)
+                {
+                    if (str_is( $permission, $perm->name) )
+                    {
                         return true;
                     }
                 }
@@ -190,27 +212,36 @@ trait CrowdMembershipTrait
     public function ability($roles, $permissions, $options = [])
     {
         // Convert string to array if that's what is passed in.
-        if (!is_array($roles)) {
+        if (!is_array($roles))
+        {
             $roles = explode(',', $roles);
         }
-        if (!is_array($permissions)) {
+
+        if (!is_array($permissions))
+        {
             $permissions = explode(',', $permissions);
         }
 
         // Set up default values and validate options.
-        if (!isset($options['validate_all'])) {
+        if (!isset($options['validate_all']))
+        {
             $options['validate_all'] = false;
-        } else {
-            if ($options['validate_all'] !== true && $options['validate_all'] !== false) {
-                throw new InvalidArgumentException();
-            }
         }
-        if (!isset($options['return_type'])) {
+        elseif ($options['validate_all'] !== true && $options['validate_all'] !== false)
+        {
+            throw new InvalidArgumentException();
+        }
+
+        if (!isset($options['return_type']))
+        {
             $options['return_type'] = 'boolean';
-        } else {
-            if ($options['return_type'] != 'boolean' &&
-                $options['return_type'] != 'array' &&
-                $options['return_type'] != 'both') {
+        }
+        else
+        {
+            $types = ['boolean', 'array', 'both'];
+
+           if (in_array($options['return_type'], $types))
+            {
                 throw new InvalidArgumentException();
             }
         }
@@ -218,32 +249,43 @@ trait CrowdMembershipTrait
         // Loop through roles and permissions and check each.
         $checkedRoles = [];
         $checkedPermissions = [];
-        foreach ($roles as $role) {
+        foreach ($roles as $role)
+        {
             $checkedRoles[$role] = $this->hasRole($role);
         }
-        foreach ($permissions as $permission) {
+
+        foreach ($permissions as $permission)
+        {
             $checkedPermissions[$permission] = $this->can($permission);
         }
 
         // If validate all and there is a false in either
         // Check that if validate all, then there should not be any false.
         // Check that if not validate all, there must be at least one true.
-        if(($options['validate_all'] && !(in_array(false,$checkedRoles) || in_array(false,$checkedPermissions))) ||
-            (!$options['validate_all'] && (in_array(true,$checkedRoles) || in_array(true,$checkedPermissions)))) {
+        if(
+            ($options['validate_all'] && !(in_array(false,$checkedRoles) || in_array(false,$checkedPermissions)))
+            ||  (!$options['validate_all'] && (in_array(true,$checkedRoles) || in_array(true,$checkedPermissions)))
+        )
+        {
             $validateAll = true;
-        } else {
+        }
+        else
+        {
             $validateAll = false;
         }
 
         // Return based on option
-        if ($options['return_type'] == 'boolean') {
+        if ($options['return_type'] == 'boolean')
+        {
             return $validateAll;
-        } elseif ($options['return_type'] == 'array') {
+        }
+        elseif ($options['return_type'] == 'array')
+        {
             return ['roles' => $checkedRoles, 'permissions' => $checkedPermissions];
-        } else {
+        }
+        else {
             return [$validateAll, ['roles' => $checkedRoles, 'permissions' => $checkedPermissions]];
         }
-
     }
 
     /**
@@ -272,11 +314,13 @@ trait CrowdMembershipTrait
      */
     public function detachRole($role)
     {
-        if (is_object($role)) {
+        if (is_object($role))
+        {
             $role = $role->getKey();
         }
 
-        if (is_array($role)) {
+        if (is_array($role))
+        {
             $role = $role['id'];
         }
 
@@ -300,11 +344,15 @@ trait CrowdMembershipTrait
      *
      * @param mixed $roles
      */
-    public function detachRoles($roles=null)
+    public function detachRoles($roles = null)
     {
-        if (!$roles) $roles = $this->roles()->get();
+        if (!$roles)
+        {
+            $roles = $this->roles()->get();
+        }
 
-        foreach ($roles as $role) {
+        foreach ($roles as $role)
+        {
             $this->detachRole($role);
         }
     }
